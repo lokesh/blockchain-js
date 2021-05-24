@@ -1,3 +1,5 @@
+import sha256 from  'sha256';
+
 class Blockchain {
   constructor() {
     this.chain = [];
@@ -7,8 +9,8 @@ class Blockchain {
   /**
    * [createNewBlock description]
    * @param  {Number} nonce             
-   * @param  {Number} previousBlockHash 
-   * @param  {Number} hash              hash for new transactions
+   * @param  {String} previousBlockHash 
+   * @param  {String} hash              hash for new transactions
    * @return {Object}                   new block
    */
   createNewBlock(nonce, previousBlockHash, hash) {
@@ -28,6 +30,18 @@ class Blockchain {
   }
 
   /**
+   * @param  {String} previousBlockHash [description]
+   * @param  {String} currentBlockData  [description]
+   * @param  {Number} nonce             [description]
+   * @return {[type]}                   [description]
+   */
+  hashBlock(previousBlockHash, currentBlockTransactions, nonce) {
+    const dataAsString = previousBlockHash + nonce.toString() + JSON.stringify(currentBlockTransactions);
+    const hash = sha256(dataAsString)
+    return hash;
+  }
+
+  /**
    * @return {Object} last block
    */
   getLastBlock() {
@@ -36,8 +50,8 @@ class Blockchain {
 
   /**
    * @param  {Number} amount    
-   * @param  {String} sender    
-   * @param  {String} recipient 
+   * @param  {String} sender address   
+   * @param  {String} recipient address
    * @return {Number} block transaction will be added to
    */
   createNewTransaction(amount, sender, recipient) {
