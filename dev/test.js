@@ -1,4 +1,5 @@
-import Blockchain from './Blockchain.js';
+const Blockchain = require('./blockchain');
+// import Blockchain from './Blockchain.js';
 
 
 let bc = new Blockchain();
@@ -20,7 +21,9 @@ const currentBlockTransactions = [
 
 const nonce = 1313408043;
 
-console.log(bc.hashBlock(previousBlockHash, currentBlockTransactions, nonce));
+console.log(bc);
+// console.log(bc.hashBlock(previousBlockHash, currentBlockTransactions, 116));
+// bc.proofOfWork(previousBlockHash, currentBlockTransactions);
 
 // bc.createNewBlock(398475, 'SOSIDJFDPJFS', 'UUER93HR939D');
 
