@@ -10,6 +10,11 @@ class Blockchain {
     this.createNewBlock(0, '0', '0');
   }
 
+
+  // ------
+  // Blocks
+  // ------
+
   /**
    * Once you have the nonce figured out, you can create a new block
    * and add it to the chain.
@@ -54,6 +59,11 @@ class Blockchain {
     return this.chain[this.chain.length - 1];
   }
 
+
+  // ------------
+  // Transactions
+  // ------------
+
   /**
    * @param  {Number} amount    
    * @param  {String} sender address   
@@ -70,6 +80,11 @@ class Blockchain {
     this.pendingTransactions.push(newTransaction);
     return this.getLastBlock()['index'] + 1;
   }
+
+
+  // -------------
+  // Proof of work
+  // -------------
 
   /**
    * Repeatedly hash block will we find a value with 4 leading zeros

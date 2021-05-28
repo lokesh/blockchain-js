@@ -8,12 +8,25 @@ const Blockchain = require('./Blockchain');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false}));
 
-const port = 3000;
+// ------
+// Config
+// ------
 
+const port = 3000;
 const reward = 12; // Mining reward
 const nodeAddress = uuid().split('-').join('');
 
+
+// ----
+// Init
+// ----
+
 const bc = new Blockchain();
+
+
+// ---
+// API
+// ---
 
 app.get('/blockchain', (req, res) => {
   res.send(bc);
