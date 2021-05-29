@@ -1,10 +1,15 @@
 const sha256 = require('sha256');
 // import lokesh256 from './utils/lokesh256.js';
 
+const currentNodeUrl = process.argv[3];
+
 class Blockchain {
   constructor() {
     this.chain = [];
     this.pendingTransactions = [];
+
+    this.currentNodeUrl = currentNodeUrl;
+    this.networkNodes = [];
 
     // Create genesis block
     this.createNewBlock(0, '0', '0');
@@ -102,6 +107,30 @@ class Blockchain {
     nonce--;
     return nonce;
   }
+
+  // -----
+  // Nodes
+  // -----
+  
+  /**
+   * Add nodes to networkNodes
+   * @param  {String} node
+   */
+  registerNode(node) {
+    if (node === this.currentNode || this.networkNodes.includes(node)) {
+      return;
+    }
+    this.networkNodes.push(node);
+  }
+  /**
+   * Add nodes to networkNodes
+   * @param  {[String]} nodes
+   */
+  registerNodes(nodes) {
+    const nodesSet = new Set([...this.networkNodes, ...nodes]);
+    this.networkNodes = [...nodesSet].filter(n => n !== this.currentNodeUrl);
+  }
+
 }
 
 module.exports = Blockchain;
