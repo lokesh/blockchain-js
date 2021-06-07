@@ -1,4 +1,5 @@
 const sha256 = require('sha256');
+const { v4: uuid } = require('uuid');
 // import lokesh256 from './utils/lokesh256.js';
 
 const currentNodeUrl = process.argv[3];
@@ -8,7 +9,7 @@ class Blockchain {
     this.chain = [];
     this.pendingTransactions = [];
 
-    this.currentNodeUrl = currentNodeUrl;
+    this.currentNode = currentNodeUrl;
     this.networkNodes = [];
 
     // Create genesis block
@@ -73,19 +74,25 @@ class Blockchain {
    * @param  {Number} amount    
    * @param  {String} sender address   
    * @param  {String} recipient address
-   * @return {Number} block transaction will be added to
+   * @return {Object} transaction
    */
   createNewTransaction(amount, sender, recipient) {
-    const newTransaction = {
+    return {
       amount,
       sender,
       recipient,
-    }
-
-    this.pendingTransactions.push(newTransaction);
-    return this.getLastBlock()['index'] + 1;
+      transactionId: uuid().split('-').join(''),
+    };
   }
 
+  /**
+   * @param  {Object} transaction
+   * @return {Number} block transaction will be added to
+   */
+  addTransactionToPendingTransactions(transaction) {
+    this.pendingTransactions.push(transaction);
+    return this.getLastBlock()['index'] + 1;
+  }
 
   // -------------
   // Proof of work
@@ -128,7 +135,7 @@ class Blockchain {
    */
   registerNodes(nodes) {
     const nodesSet = new Set([...this.networkNodes, ...nodes]);
-    this.networkNodes = [...nodesSet].filter(n => n !== this.currentNodeUrl);
+    this.networkNodes = [...nodesSet].filter(n => n !== this.currentNode);
   }
 
 }
