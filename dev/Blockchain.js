@@ -108,13 +108,72 @@ class Blockchain {
     let hash = '';
     let nonce = 0;
 
-    // number is lower than 100, 10
+    // number is lower than X
     while(!hash.startsWith('00')) {
       hash = this.hashBlock(previousBlockHash, currentBlockData, nonce)
       nonce++;
     }
     nonce--;
     return nonce;
+  }
+
+
+  // ------------
+  // Verification
+  // ------------
+  
+  /**
+   * @param  {String} hash
+   * @return {Boolean}
+   */
+  validateHash(hash) {
+    return hash.startsWith('00');
+  }
+
+  /**
+   * [chainIsValid description]
+   * @param  {Array} chain
+   * @return {Boolean}       [description]
+   */
+  validateChain(chain) {
+    let isValid = true;
+    
+    for (let i = 1; i < chain.length; i++) {
+      const block = chain[i];
+      const prevBlock = chain[i - 1];
+
+      const blockHash = this.hashBlock(
+        prevBlock.hash,
+        {
+          transactions: block.transactions,
+          index: block.index,
+        },
+        block.nonce,
+      );
+
+      if (!this.validateHash(blockHash)) {
+        console.log('Invalid block hash');
+        isValid = false;
+      }
+
+      if (block.previousBlockHash !== prevBlock.hash) {
+        console.log('Previous block hash mismatch');
+        isValid = false;
+      }
+    };
+
+    // Validate gensis block
+    const genesisBlock = chain[0];
+    if (genesisBlock.nonce !== 0
+      || genesisBlock.previousBlockHash !== '0'
+      || genesisBlock.hash !== '0'
+      || genesisBlock.transactions.length > 0)
+    {
+      console.log('Invalid genesis block');
+      isValid=false;
+    }
+
+    return isValid;
   }
 
   // -----
