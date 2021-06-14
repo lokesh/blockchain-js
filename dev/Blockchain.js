@@ -99,7 +99,7 @@ class Blockchain {
   // -------------
 
   /**
-   * Repeatedly hash block will we find a value with 4 leading zeros
+   * Repeatedly hash block will we find a value with X leading zeros
    * @param  {[type]} previousBlockHash
    * @param  {[type]} currentBlockData 
    * @return {[type]}                  
@@ -107,6 +107,8 @@ class Blockchain {
   proofOfWork(previousBlockHash, currentBlockData) {
     let hash = '';
     let nonce = 0;
+
+    // number is lower than 100, 10
     while(!hash.startsWith('00')) {
       hash = this.hashBlock(previousBlockHash, currentBlockData, nonce)
       nonce++;

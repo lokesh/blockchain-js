@@ -33,6 +33,11 @@ app.get('/blockchain', (req, res) => {
   res.send(bc);
 })
 
+
+// ------------
+// Transactions
+// ------------
+
 app.post('/transaction', (req, res) => {
   const blockIndex = bc.addTransactionToPendingTransactions(req.body);
   res.json({ note: `Transaction will be added in block ${blockIndex}`});
@@ -44,23 +49,51 @@ app.post('/transaction/broadcast', async (req, res) => {
    
    bc.addTransactionToPendingTransactions(transaction);
 
-  const registerPromises = [];
-
-  const promises = bc.networkNodes.map(async (nodeUrl) => {
-    const post = await fetch(`${nodeUrl}/transaction`, {
+  const broadcastPromises = bc.networkNodes.map(async (node) => {
+    return fetch(`${node}/transaction`, {
       method: 'POST',
       body: JSON.stringify(transaction),
       headers: {'Content-Type': 'application/json'}
     });
-
-    registerPromises.push(post);
   })
 
-  const resp = await Promise.all(registerPromises)
+  const resp = await Promise.all(broadcastPromises)
   res.json({ note: 'Transaction created and broadcast' });
 })
 
-app.get('/mine', (req, res) => {
+// ------
+// Blocks
+// ------
+
+
+app.post('/receive-new-block', (req, res) => {
+  const newBlock = req.body;
+  const { index, previousBlockHash } = newBlock;
+  const lastBlock = bc.getLastBlock();
+
+  const hasCorrectHash = lastBlock.hash === previousBlockHash;
+  const hasCorrectIndex = lastBlock.index + 1 === index;
+  
+  if (hasCorrectHash && hasCorrectIndex) {
+    bc.chain.push(newBlock);
+    bc.pendingTransactions = [];
+    res.json({
+      note: 'Block received and accepted',
+      block: newBlock,
+    });
+  } else {
+    res.json({
+      note: 'Block received but rejected',
+      block: newBlock,
+    });
+  }
+})
+
+// ------
+// Mining
+// ------
+
+app.get('/mine', async (req, res) => {
   const lastBlock = bc.getLastBlock();
   
   const newBlockData = {
@@ -69,21 +102,41 @@ app.get('/mine', (req, res) => {
   };
 
   const nonce = bc.proofOfWork(lastBlock.hash, newBlockData);
-  const newBlockHash = bc.hashBlock(lastBlock.hash, newtBlockData, nonce);
+  const newBlockHash = bc.hashBlock(lastBlock.hash, newBlockData, nonce);
   
+  const newBlock = bc.createNewBlock(nonce, lastBlock.hash, newBlockHash)
+
+  const blockPromises = bc.networkNodes.map(node => {
+    return fetch(`${node}/receive-new-block`, {
+      method: 'POST',
+      body: JSON.stringify(newBlock),
+      headers: {'Content-Type': 'application/json'}
+    });
+  });
+
+  const resp = await Promise.all(blockPromises);
+
   // Reward
   // Note: In reality, I think the reward is added as first transaction, rather
   // than appended on after. This latter approach would make hashes incorrect.
-  bc.createNewTransaction(reward, '00', nodeAddress);
+  const rewardTransaction = bc.createNewTransaction(reward, '00', nodeAddress);
 
-  const newBlock = bc.createNewBlock(nonce, lastBlock.hash, newBlockHash)
+  await fetch(`${bc.currentNode}/transaction/broadcast`, {
+    method: 'POST',
+    body: JSON.stringify(rewardTransaction),
+    headers: {'Content-Type': 'application/json'}
+  });
 
   res.json({
-    note: 'New block mined',
+    note: 'New block mined & broadcast',
     block: newBlock,
   });
 })
 
+
+// ----------
+// Networking
+// ----------
 
 // Used when a node is coming online. It hits this endpoint on a known node.
 // This target note will register the new node and then broadcast it to all
@@ -95,16 +148,12 @@ app.post('/register-and-broadcast-node', async (req, res) => {
   bc.registerNode(node);
   
   // Broadcast new node to network
-  const registerPromises = [];
-
-  const promises = bc.networkNodes.map(async (nodeUrl) => {
-    const post = await fetch(`${nodeUrl}/register-node`, {
+  const registerPromises = bc.networkNodes.map(async (node) => {
+    return fetch(`${node}/register-node`, {
       method: 'POST',
       body: JSON.stringify({ 'node': node }),
       headers: {'Content-Type': 'application/json'}
     });
-
-    registerPromises.push(post);
   })
 
   const resp = await Promise.all(registerPromises)
