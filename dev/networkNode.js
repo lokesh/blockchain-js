@@ -14,7 +14,7 @@ app.use(bodyParser.urlencoded({ extended: false}));
 // ------
 
 const port = process.argv[2];
-const reward = 12; // Mining reward
+const reward = 12.5; // Mining reward
 const nodeAddress = uuid().split('-').join('');
 
 
@@ -38,6 +38,13 @@ app.get('/blockchain', (req, res) => {
 // Transactions
 // ------------
 
+/**
+ * @param  {Object} req
+ * @param  {Number} req.amount
+ * @param  {String} req.sender
+ * @param  {String} req.recipient
+ * @return {Object} resp
+ */
 app.post('/transaction', (req, res) => {
   const blockIndex = bc.addTransactionToPendingTransactions(req.body);
   res.json({ note: `Transaction will be added in block ${blockIndex}`});
@@ -61,10 +68,10 @@ app.post('/transaction/broadcast', async (req, res) => {
   res.json({ note: 'Transaction created and broadcast' });
 })
 
+
 // ------
 // Blocks
 // ------
-
 
 app.post('/receive-new-block', (req, res) => {
   const newBlock = req.body;
@@ -88,6 +95,7 @@ app.post('/receive-new-block', (req, res) => {
     });
   }
 })
+
 
 // ------
 // Mining
@@ -134,6 +142,66 @@ app.get('/mine', async (req, res) => {
 })
 
 
+// ---------
+// Consensus
+// ---------
+
+/**
+ * Get blockchains from each node.
+ * If longer than chain on this node, replace current.
+ *
+ * This is a simplified behavior. In a full implementation, we would also...
+ * - Find where the chain forked
+ * - For blocks on our chain that are orphaned, get transactions
+ * - If any transactions missing from new chain, add back to mempool
+ */
+app.get('/consensus', async (req, res) => {
+  // console.log(bc.networkNodes);
+  
+  // TODO: TEMP HARDCODED
+  const nodes = ['http://localhost:3001', 'http://localhost:3002'] 
+  
+  const blockPromises = nodes
+    .map(async (node) => {
+      const resp = await fetch(`${node}/blockchain`, {
+        method: 'GET',
+        headers: {'Content-Type': 'application/json'},
+      })
+      return resp.json();
+    });
+
+  const resp = await Promise.all(blockPromises);
+  
+  let longestChainLength = bc.chain.length;
+  let newLongestChain = null;
+  let newPendingTransactions = null;
+
+  resp.forEach(node => {
+    if (node.chain.length > longestChainLength) {
+      longestChainLength = node.chain.length;
+      
+      newLongestChain = node.chain;
+      newPendingTransactions = node.chain.pendingTransactions;
+    }
+  });
+
+  if (!newLongestChain || (newLongestChain && !bc.validateChain(newLongestChain))) {
+    res.json({
+      note: 'Current chain has not been replaced',
+      chain: bc.chain
+    });    
+  } else if (newLongestChain && bc.validateChain(newLongestChain)) {
+    bc.chain = newLongestChain;
+    bc.pendingTransactions = newPendingTransactions;
+
+    res.json({
+      note: 'Current chain replaced.',
+      chain: bc.chain
+    });    
+  }
+});
+
+
 // ----------
 // Networking
 // ----------
@@ -147,6 +215,8 @@ app.post('/register-and-broadcast-node', async (req, res) => {
   // Register new node to current
   bc.registerNode(node);
   
+  // BUG: Not broadingcast correctly.
+
   // Broadcast new node to network
   const registerPromises = bc.networkNodes.map(async (node) => {
     return fetch(`${node}/register-node`, {
@@ -156,7 +226,7 @@ app.post('/register-and-broadcast-node', async (req, res) => {
     });
   })
 
-  const resp = await Promise.all(registerPromises)
+  const resp = await Promise.all(registerPromises)  
 
   // Send new node all known network nodes
   const bulkResp = await fetch(`${node}/register-nodes`, {
@@ -183,6 +253,51 @@ app.post('/register-nodes', (req, res) => {
   const nodes = req.body.nodes
   bc.registerNodes(nodes);
   res.send({ note: 'Done' });
+});
+
+
+// --------------
+// Block explorer
+// --------------
+
+app.get('/block/:blockHash', (req, res) => {
+  const blockHash = req.params.blockHash;  
+  const block = bc.getBlock(blockHash);
+
+  if (block) {
+    res.json({ block });
+  } else {
+    res.json({
+      note: 'Block not found.',
+      block: null,
+    });
+  }
+});
+
+app.get('/transaction/:transactionId', (req, res) => {
+  const transactionId = req.params.transactionId;  
+  const { transaction, block } = bc.getTransaction(transactionId);
+
+  if (transaction) {
+    res.json({
+      transaction,
+      block,
+    });
+  } else {
+    res.json({
+      note: 'Transaction not found.',
+      transaction: null,
+      block: null,
+    });
+  }
+});
+
+app.get('/address/:address', (req, res) => {
+  const address = req.params.address;  
+  const addressData = bc.getAddressData(address);
+  res.json({
+    addressData,
+  })
 });
 
 

@@ -22,6 +22,23 @@ class Blockchain {
   // ------
 
   /**
+   * @param {String} hash
+   * @return {Object} block
+   */
+  getBlock(hash) {
+    return this.chain.find(block => {
+      return block.hash === hash;
+    })
+  }
+
+  /**
+   * @return {Object} last block
+   */
+  getLastBlock() {
+    return this.chain[this.chain.length - 1];
+  }
+
+  /**
    * Once you have the nonce figured out, you can create a new block
    * and add it to the chain.
    * 
@@ -58,17 +75,74 @@ class Blockchain {
     return hash;
   }
 
-  /**
-   * @return {Object} last block
-   */
-  getLastBlock() {
-    return this.chain[this.chain.length - 1];
-  }
-
 
   // ------------
   // Transactions
   // ------------
+
+
+  /**
+   * @param {String} id
+   * @return {Object} transaction
+   */
+  getTransaction(id) {
+    let targetTransaction;
+    let targetBlock;
+    
+    this.chain.forEach(block => {
+      block.transactions.forEach(transaction => {
+        if (transaction.transactionId === id) {
+          targetTransaction = transaction;
+          targetBlock = block;
+        }
+      })
+    })
+
+    return {
+      transaction: targetTransaction,
+      block: targetBlock,
+    };
+  }
+
+  /**
+   * Return balance and all transactions for a given address.
+   * @param  {String} address
+   * @return {Object} 
+   */
+  getAddressData(address) {
+    const transactions = [];
+    
+    this.chain.forEach(block => {
+      console.log('block', block.index);
+
+      block.transactions.forEach(tx => {
+        console.log('tx', tx);
+        console.log('address', address);
+
+        if (tx.sender.toLowerCase() === address || tx.recipient.toLowerCase() === address) {
+          console.log('tx', tx);
+          transactions.push(tx);
+        }
+      });
+    });
+
+    console.log(transactions.length);
+
+    let balance = 0;
+    transactions.forEach(tx => {
+      if (tx.sender.toLowerCase() === address) {
+        balance -= tx.amount;
+      }
+      if (tx.recipient.toLowerCase() === address) {
+        balance += tx.amount; 
+      }
+    });
+
+    return {
+      transactions,
+      balance,
+    };
+  }
 
   /**
    * @param  {Number} amount    
@@ -89,7 +163,9 @@ class Blockchain {
    * @param  {Object} transaction
    * @return {Number} block transaction will be added to
    */
-  addTransactionToPendingTransactions(transaction) {
+  addTransactionToPendingTransactions(transactionData) {
+    const { amount, sender, recipient } = transactionData;
+    const transaction = this.createNewTransaction(amount, sender, recipient);
     this.pendingTransactions.push(transaction);
     return this.getLastBlock()['index'] + 1;
   }
@@ -131,7 +207,9 @@ class Blockchain {
   }
 
   /**
-   * [chainIsValid description]
+   * Go through each block and make sure the hash is valid and the prev block
+   * hash it uses is correct. Additionally, confirm the genesis node params.
+   *
    * @param  {Array} chain
    * @return {Boolean}       [description]
    */
