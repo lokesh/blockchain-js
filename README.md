@@ -14,6 +14,11 @@ npm run node1 # http://localhost:3001
 npm run node2 # http://localhost:3002
 ```
 
+
+### Block explorer UI
+
+Visit http://localhost:PORT/block-explorer
+
 ### Add transaction
 
 In Postman, POST to /transaction with a Body in raw JSON format. e.g.
@@ -26,3 +31,6 @@ In Postman, POST to /transaction with a Body in raw JSON format. e.g.
 }
 ``` 
 
+### Mine a new block
+
+Visit http://localhost:PORT/mine

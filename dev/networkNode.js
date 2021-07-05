@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
@@ -23,6 +24,15 @@ const nodeAddress = uuid().split('-').join('');
 // ----
 
 const bc = new Blockchain();
+
+
+// -----------------
+// Block Explorer UI
+// -----------------
+
+app.get('/block-explorer', (req, res) => {
+  res.sendFile('./block-explorer/index.html', {root: __dirname});
+});
 
 
 // ---
